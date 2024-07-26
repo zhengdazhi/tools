@@ -140,7 +140,7 @@ func openHardwareMonitorGetter() (CPUData, error) {
 	extractCPUTemperatures(root, &temperatures)
 
 	// 计算 CPU 温度统计数据
-	cpuData := calculateCPUData(temperatures)
+	cpuData := calculateWindowsCPUData(temperatures)
 	// 打印结果
 	// fmt.Println("--------------------------------------------------")
 	// fmt.Printf("CPU Cores: %d\n", cpuData.CPUCores)
@@ -182,7 +182,7 @@ func extractCPUTemperatures(node Node, temperatures *[]float64) {
 }
 
 // 计算 CPU 温度的统计数据
-func calculateCPUData(temperatures []float64) CPUData {
+func calculateWindowsCPUData(temperatures []float64) CPUData {
 	log.Println("统计cpu多核平均温度")
 	var data CPUData
 	if len(temperatures) == 0 {

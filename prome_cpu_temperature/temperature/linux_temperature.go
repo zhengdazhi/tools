@@ -1,6 +1,7 @@
 package temperature
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -26,11 +27,11 @@ func (l LinuxTemperatureGetter) FetchCPUTemperature() (*CPUData, error) {
 		return nil, err
 	}
 	// 统计温度数据
-	cpuData, err := calculateCPUData(cpu_tem)
+	cpuData, err := calculateLinuxCPUData(cpu_tem)
 	if err != nil {
 		return nil, err
 	}
-	return cpuData, nil
+	return &cpuData, nil
 
 	// 以下是模拟数据，用来返回
 	// return &CPUData{
@@ -72,7 +73,7 @@ func getCpuTem() ([]string, error) {
 }
 
 // 收集cpu温度信息
-func calculateCPUData(cpu_data []string) (CPUData, error) {
+func calculateLinuxCPUData(cpu_data []string) (CPUData, error) {
 	var data CPUData
 	// 定义正则匹配规则
 	var temperatureRegex = regexp.MustCompile(`\+\d+\.\d+°C`)
@@ -99,14 +100,14 @@ func calculateCPUData(cpu_data []string) (CPUData, error) {
 	// 	fmt.Println(tem)
 	// }
 	if len(tems) == 0 {
-		return data
+		return data, errors.New("没有获得cpu核心温度数据")
 	}
 	// 获得cpu核心数
 	data.CPUCores = len(tems)
 	// 计算多个物理cpu的平均温度,和获取最大和最新温度
 	sum := 0.0
-	data.MinTemperature = temperatures[0]
-	data.MaxTemperature = temperatures[0]
+	data.MinTemperature = tems[0]
+	data.MaxTemperature = tems[0]
 	for _, tem := range tems {
 		if tem > data.MaxTemperature {
 			data.MaxTemperature = tem
