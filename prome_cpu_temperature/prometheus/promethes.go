@@ -56,6 +56,10 @@ func init() {
 	prometheus.MustRegister(cpuCoreTemperatureMax)
 	prometheus.MustRegister(cpuCoreTemperatureMin)
 	prometheus.MustRegister(cpuCoreTemperatureAvg)
+	ok, err := checkTools()
+	if !ok {
+		log.Fatalf("Required tools not found: %v", err)
+	}
 }
 
 // 启动主程序
@@ -146,42 +150,31 @@ func checkTools() (bool, error) {
 // 获取
 func getExeDir(systemArch string) (bool, error) {
 	if systemArch == "windows" {
+		// 编译生成的可执行文件的路径 go build cmd/main.go 后生成exe的路径
 		exe, err := os.Executable()
 		if err != nil {
 			panic(err)
 		}
+		// 获取项目所在路径， go run cmd/main.go 下的路径
 		dir := filepath.Dir(exe)
-		fmt.Println("Executable directory: ", dir)
+		//fmt.Println("Executable directory: ", dir)
 		pwd, err := os.Getwd()
 		if err != nil {
 			fmt.Println("Error getting working directory:", err)
 		}
-		fmt.Println("Current working directory:", pwd)
-		filePath := filepath.Join(dir, "/tools/OpenHardwareMonitor/OpenHardwareMonitor.exe")
-		if _, err := os.Stat(filePath); err == nil {
-			// 没有错误发生，文件存在
-			if info, err := os.Lstat(filePath); err == nil && !info.IsDir() {
-				// 确保它是一个文件而不是目录
-				return true, nil
-			} else {
-				return false, err
-			}
-		} else {
-			return false, err
+		//fmt.Println("Current working directory:", pwd)
+		directories := []string{
+			filepath.Join(dir, "tools", "OpenHardwareMonitor", "OpenHardwareMonitor.exe"),
+			filepath.Join(pwd, "tools", "OpenHardwareMonitor", "OpenHardwareMonitor.exe"),
 		}
-
-		filePath2 := filepath.Join(pwd, "/tools/OpenHardwareMonitor/OpenHardwareMonitor.exe")
-		if _, err := os.Stat(filePath2); err == nil {
-			// 没有错误发生，文件存在
-			if info, err := os.Lstat(filePath2); err == nil && !info.IsDir() {
-				// 确保它是一个文件而不是目录
+		// 遍历这些路径查看是否有
+		for _, filePath := range directories {
+			if _, err := os.Stat(filePath); err == nil {
+				fmt.Printf("Found OpenHardwareMonitor.exe at %s\n", filePath)
 				return true, nil
-			} else {
-				return false, err
 			}
-		} else {
-			return false, err
 		}
+		return false, errors.New("获取OpenHardwareMonitor可执行文件失败")
 	}
 	if systemArch == "linux" {
 		if info, err := os.Lstat("/usr/bin/sensors"); err == nil && !info.IsDir() {
