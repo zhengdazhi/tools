@@ -170,10 +170,10 @@ func getExeDir(systemArch string) (bool, error) {
 			return false, err
 		}
 
-		filePath = filepath.Join(pwd, "/tools/OpenHardwareMonitor/OpenHardwareMonitor.exe")
-		if _, err := os.Stat(filePath); err == nil {
+		filePath2 := filepath.Join(pwd, "/tools/OpenHardwareMonitor/OpenHardwareMonitor.exe")
+		if _, err := os.Stat(filePath2); err == nil {
 			// 没有错误发生，文件存在
-			if info, err := os.Lstat(filePath); err == nil && !info.IsDir() {
+			if info, err := os.Lstat(filePath2); err == nil && !info.IsDir() {
 				// 确保它是一个文件而不是目录
 				return true, nil
 			} else {
