@@ -3,6 +3,7 @@ package temperature
 import (
 	"fmt"
 	"io"
+	"log"
 	"os/exec"
 	"regexp"
 	"strconv"
@@ -13,24 +14,31 @@ import (
 type LinuxTemperatureGetter struct {
 }
 
+// 实现temperature中的接口
 func (l LinuxTemperatureGetter) FetchCPUTemperature() (*CPUData, error) {
 	fmt.Println("linux cpu temperature")
+	// 采集原始数据
 	cpu_tem, err := getCpuTem()
+	for _, line := range cpu_tem {
+		fmt.Println(line)
+	}
 	if err != nil {
 		return nil, err
 	}
-	avg_tem, err := getPackageTem(cpu_tem)
+	// 统计温度数据
+	cpuData, err := calculateCPUData(cpu_tem)
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("linux cpu温度: %0.2f°C\n", avg_tem)
+	return cpuData, nil
+
 	// 以下是模拟数据，用来返回
-	return &CPUData{
-		CPUCores:       4,
-		MaxTemperature: 75.0,
-		MinTemperature: 35.0,
-		AvgTemperature: 55.0,
-	}, nil
+	// return &CPUData{
+	// 	CPUCores:       4,
+	// 	MaxTemperature: 75.0,
+	// 	MinTemperature: 35.0,
+	// 	AvgTemperature: 55.0,
+	// }, nil
 }
 
 // 通过sensors命令获取cpu温度信息
@@ -63,43 +71,51 @@ func getCpuTem() ([]string, error) {
 	return cpu_data, nil
 }
 
-// 收集cpu封装温度信息
-func getPackageTem(cpu_data []string) (float64, error) {
+// 收集cpu温度信息
+func calculateCPUData(cpu_data []string) (CPUData, error) {
+	var data CPUData
 	// 定义正则匹配规则
 	var temperatureRegex = regexp.MustCompile(`\+\d+\.\d+°C`)
-	var tems []string
+	var tems []float64
 	for _, line := range cpu_data {
-		if strings.HasPrefix(line, "Package id") {
+		// 收集cpu 封装温度
+		//if strings.HasPrefix(line, "Package id") {
+		// 获取核心温度数据
+		if strings.HasPrefix(line, "Core ") {
 			//fmt.Println(line)
 			match := temperatureRegex.FindString(line)
 			if match != "" {
 				temperatureStr := strings.TrimSuffix(strings.TrimPrefix(match, "+"), "°C") // 去除前缀和后缀，得到温度字符串
 				//fmt.Println(temperatureStr)
-				tems = append(tems, temperatureStr)
+				temperature, err := strconv.ParseFloat(temperatureStr, 64)
+				if err != nil {
+					log.Fatal("转换温度数据错误: ", err)
+				}
+				tems = append(tems, temperature)
 			}
 		}
 	}
+	// for _, tem := range tems {
+	// 	fmt.Println(tem)
+	// }
 	if len(tems) == 0 {
-		return 0, fmt.Errorf("没有cpu封装温度数据")
+		return data
 	}
-	// 计算多个物理cpu的平均温度
-	if len(tems) > 1 {
-		var sum_tem float64
-		for _, tem := range tems {
-			value, err := strconv.ParseFloat(tem, 64)
-			if err != nil {
-				return 0, fmt.Errorf("转换温度数据错误: ", err)
-			}
-			sum_tem += value
+	// 获得cpu核心数
+	data.CPUCores = len(tems)
+	// 计算多个物理cpu的平均温度,和获取最大和最新温度
+	sum := 0.0
+	data.MinTemperature = temperatures[0]
+	data.MaxTemperature = temperatures[0]
+	for _, tem := range tems {
+		if tem > data.MaxTemperature {
+			data.MaxTemperature = tem
 		}
-		avg_tem := sum_tem / float64(len(tems))
-		return avg_tem, nil
-	} else {
-		// 单核cpu直接返回结果
-		value, err := strconv.ParseFloat(tems[0], 64)
-		if err != nil {
-			return 0, fmt.Errorf("转换温度数据错误: ", err)
+		if tem < data.MinTemperature {
+			data.MinTemperature = tem
 		}
-		return value, nil
+		sum += tem
 	}
+	data.AvgTemperature = sum / float64(data.CPUCores)
+	return data, nil
 }
