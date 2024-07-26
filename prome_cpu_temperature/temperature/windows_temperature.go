@@ -2,16 +2,13 @@ package temperature
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 
 	//"io/ioutil"
 	"log"
 	"net/http"
-	"os"
 	"os/exec"
-	"path/filepath"
 	"strconv"
 	"strings"
 )
@@ -112,40 +109,6 @@ func parseTemperature(raw string) float64 {
 		return (temp/10 - 273.15)
 	}
 	return 0
-}
-
-// 获取
-func getExeDir() (string, error) {
-	exe, err := os.Executable()
-	if err != nil {
-		panic(err)
-	}
-	dir := filepath.Dir(exe)
-	fmt.Println("Executable directory: ", dir)
-	pwd, err := os.Getwd()
-	if err != nil {
-		fmt.Println("Error getting working directory:", err)
-	}
-	fmt.Println("Current working directory:", pwd)
-
-	filePath := filepath.Join(dir, "/tools/OpenHardwareMonitor/OpenHardwareMonitor.exe")
-	if _, err := os.Stat(filePath); err == nil {
-		// 没有错误发生，文件存在
-		if info, err := os.Lstat(filePath); err == nil && !info.IsDir() {
-			// 确保它是一个文件而不是目录
-			return filePath, nil
-		}
-	}
-
-	filePath = filepath.Join(pwd, "/tools/OpenHardwareMonitor/OpenHardwareMonitor.exe")
-	if _, err := os.Stat(filePath); err == nil {
-		// 没有错误发生，文件存在
-		if info, err := os.Lstat(filePath); err == nil && !info.IsDir() {
-			// 确保它是一个文件而不是目录
-			return filePath, nil
-		}
-	}
-	return "", errors.New("没有找到OpenHardwareMonitor.exe程序")
 }
 
 func openHardwareMonitorGetter() (CPUData, error) {

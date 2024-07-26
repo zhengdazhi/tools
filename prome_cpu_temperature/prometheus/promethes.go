@@ -1,10 +1,13 @@
 package prometheus
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
+	"path/filepath"
+	"runtime"
 	"sync"
 	"time"
 
@@ -55,6 +58,7 @@ func init() {
 	prometheus.MustRegister(cpuCoreTemperatureAvg)
 }
 
+// 启动主程序
 func Run(port string) {
 	var wg sync.WaitGroup
 	wg.Add(2)
@@ -75,6 +79,7 @@ func Run(port string) {
 	wg.Wait()
 }
 
+// 启动prometheus http服务
 func startHttp(port string) {
 	httpAddr := ":" + port
 	http.Handle("/metrics", promhttp.Handler())
@@ -100,19 +105,89 @@ func collectAndSetMetrics() error {
 		//  AvgTemperature: 55.0,
 		// }
 
+		// 设置Prometheus指标值
 		cpuCoreCount.Set(float64(cpuData.CPUCores))
 		cpuCoreTemperatureMax.Set(cpuData.MaxTemperature)
 		cpuCoreTemperatureMin.Set(cpuData.MinTemperature)
 		cpuCoreTemperatureAvg.Set(cpuData.AvgTemperature)
 
-		// 设置Prometheus指标值
-		// cpuCoreCount.Set(float64(cpuData.cpuCoreCount))
-		// cpuCoreTemperatureMax.Set(cpuData.cpuCoreTemperatureMax)
-		// cpuCoreTemperatureMin.Set(cpuData.cpuCoreTemperatureMin)
-		// cpuCoreTemperatureAvg.Set(cpuData.cpuCoreTemperatureAvg)
-
 		// 每10秒收集一次数据
 		time.Sleep(10 * time.Second)
 	}
 
+}
+
+// 检测依赖工具是否配置齐全
+func checkTools() (bool, error) {
+	switch runtime.GOOS {
+	case "windows":
+		fmt.Println("env is windows")
+		systemArch := "windows"
+		ok, err := getExeDir(systemArch)
+		if ok {
+			return true, nil
+		} else {
+			return false, err
+		}
+	case "linux":
+		fmt.Println("evn is linux")
+		systemArch := "linux"
+		ok, err := getExeDir(systemArch)
+		if ok {
+			return true, nil
+		} else {
+			return false, err
+		}
+	default:
+		return false, fmt.Errorf("unsupported opeaating system %s", runtime.GOOS)
+	}
+}
+
+// 获取
+func getExeDir(systemArch string) (bool, error) {
+	if systemArch == "windows" {
+		exe, err := os.Executable()
+		if err != nil {
+			panic(err)
+		}
+		dir := filepath.Dir(exe)
+		fmt.Println("Executable directory: ", dir)
+		pwd, err := os.Getwd()
+		if err != nil {
+			fmt.Println("Error getting working directory:", err)
+		}
+		fmt.Println("Current working directory:", pwd)
+		filePath := filepath.Join(dir, "/tools/OpenHardwareMonitor/OpenHardwareMonitor.exe")
+		if _, err := os.Stat(filePath); err == nil {
+			// 没有错误发生，文件存在
+			if info, err := os.Lstat(filePath); err == nil && !info.IsDir() {
+				// 确保它是一个文件而不是目录
+				return true, nil
+			} else {
+				return false, err
+			}
+		} else {
+			return false, err
+		}
+
+		filePath = filepath.Join(pwd, "/tools/OpenHardwareMonitor/OpenHardwareMonitor.exe")
+		if _, err := os.Stat(filePath); err == nil {
+			// 没有错误发生，文件存在
+			if info, err := os.Lstat(filePath); err == nil && !info.IsDir() {
+				// 确保它是一个文件而不是目录
+				return true, nil
+			} else {
+				return false, err
+			}
+		} else {
+			return false, err
+		}
+	}
+	if systemArch == "linux" {
+		if info, err := os.Lstat("/usr/bin/sensors"); err == nil && !info.IsDir() {
+			return true, nil
+		}
+	}
+
+	return false, errors.New("没有找到OpenHardwareMonitor.exe程序")
 }
