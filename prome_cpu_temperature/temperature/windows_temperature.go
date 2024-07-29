@@ -9,6 +9,7 @@ import (
 	"log"
 	"net/http"
 	"os/exec"
+	"prome_cpu_temperature/logutil"
 	"strconv"
 	"strings"
 )
@@ -23,7 +24,7 @@ type WindowsTemperatureGetter struct {
 // }
 
 func (w WindowsTemperatureGetter) FetchCPUTemperature() (*CPUData, error) {
-	log.Println("使用windows系统")
+	logutil.LogDebug("使用windows系统")
 	cpuData, err := openHardwareMonitorGetter()
 	if err != nil {
 		log.Println("获取温度数据失败\n", err)
@@ -112,7 +113,7 @@ func parseTemperature(raw string) float64 {
 }
 
 func openHardwareMonitorGetter() (CPUData, error) {
-	log.Println("使用openHardwareMonitor获取数据")
+	logutil.LogDebug("使用openHardwareMonitor获取数据")
 	// 假设 JSON 数据来自于本地文件或者 HTTP 请求
 	url := "http://localhost:8085/data.json" // 修改为实际的 JSON 数据来源
 	resp, err := http.Get(url)
@@ -183,7 +184,7 @@ func extractCPUTemperatures(node Node, temperatures *[]float64) {
 
 // 计算 CPU 温度的统计数据
 func calculateWindowsCPUData(temperatures []float64) CPUData {
-	log.Println("统计cpu多核平均温度")
+	logutil.LogDebug("统计cpu多核平均温度")
 	var data CPUData
 	if len(temperatures) == 0 {
 		return data

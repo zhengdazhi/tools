@@ -20,9 +20,9 @@ func (l LinuxTemperatureGetter) FetchCPUTemperature() (*CPUData, error) {
 	fmt.Println("linux cpu temperature")
 	// 采集原始数据
 	cpu_tem, err := getCpuTem()
-	for _, line := range cpu_tem {
-		fmt.Println(line)
-	}
+	// for _, line := range cpu_tem {
+	// 	fmt.Println(line)
+	// }
 	if err != nil {
 		return nil, err
 	}

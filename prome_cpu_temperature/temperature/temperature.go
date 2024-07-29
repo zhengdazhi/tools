@@ -2,7 +2,7 @@ package temperature
 
 import (
 	"fmt"
-	"log"
+	"prome_cpu_temperature/logutil"
 	"runtime"
 	"time"
 )
@@ -40,19 +40,19 @@ func GetCPUTemperature() (*CPUData, error) {
 	if err != nil {
 		return nil, fmt.Errorf("error creating CPU temperature getter: %w", err)
 	}
-	log.Println("创建收集器成")
+	logutil.LogDebug("创建收集器成")
 	// 获取数据
 	data, err := cpuTemperature.FetchCPUTemperature()
 	if err != nil {
 		return nil, fmt.Errorf("error getting CPU temperatue: %w", err)
 	}
-	log.Println("收集数据完成")
+	logutil.LogDebug("收集数据完成")
 	currentTime := time.Now()
 	formatted := currentTime.Format("2006-01-02 15:04:05")
-	fmt.Printf("######## %s ######\n", formatted)
-	// fmt.Printf("CPU Cores: %d\n", data.CPUCores)
-	// fmt.Printf("Max Temperature: %.2f°C\n", data.MaxTemperature)
-	// fmt.Printf("Min Temperature: %.2f°C\n", data.MinTemperature)
-	// fmt.Printf("Avg Temperature: %.2f°C\n", data.AvgTemperature)
+	logutil.LogDebug("######## %s ######\n", formatted)
+	logutil.LogDebug("CPU Cores: %d\n", data.CPUCores)
+	logutil.LogDebug("Max Temperature: %.2f°C\n", data.MaxTemperature)
+	logutil.LogDebug("Min Temperature: %.2f°C\n", data.MinTemperature)
+	logutil.LogDebug("Avg Temperature: %.2f°C\n", data.AvgTemperature)
 	return data, nil
 }

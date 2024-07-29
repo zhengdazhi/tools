@@ -11,6 +11,7 @@ import (
 	"sync"
 	"time"
 
+	"prome_cpu_temperature/logutil"
 	"prome_cpu_temperature/temperature"
 
 	"github.com/prometheus/client_golang/prometheus"          // Prometheus客户端库
@@ -88,6 +89,7 @@ func startHttp(port string) {
 	httpAddr := ":" + port
 	http.Handle("/metrics", promhttp.Handler())
 	log.Printf("Starting HTTP server on %s", httpAddr)
+	//logutil.LogDebug("Start HTTP server on %s", httpAddr)
 	log.Fatal(http.ListenAndServe(httpAddr, nil))
 }
 
@@ -114,6 +116,12 @@ func collectAndSetMetrics() error {
 		cpuCoreTemperatureMax.Set(cpuData.MaxTemperature)
 		cpuCoreTemperatureMin.Set(cpuData.MinTemperature)
 		cpuCoreTemperatureAvg.Set(cpuData.AvgTemperature)
+		logutil.LogDebug("Collected CPU metrics: cores=%d, max=%.2f, min=%.2f, avg=%.2f",
+			cpuData.CPUCores,
+			cpuData.MaxTemperature,
+			cpuData.MinTemperature,
+			cpuData.AvgTemperature,
+		)
 
 		// 每10秒收集一次数据
 		time.Sleep(10 * time.Second)
@@ -125,62 +133,84 @@ func collectAndSetMetrics() error {
 func checkTools() (bool, error) {
 	switch runtime.GOOS {
 	case "windows":
-		fmt.Println("env is windows")
-		systemArch := "windows"
-		ok, err := getExeDir(systemArch)
-		if ok {
-			return true, nil
-		} else {
-			return false, err
-		}
+		logutil.LogDebug("Enviroment is Windows")
+		return checkWindowsTools()
 	case "linux":
-		fmt.Println("evn is linux")
-		systemArch := "linux"
-		ok, err := getExeDir(systemArch)
-		if ok {
-			return true, nil
-		} else {
-			return false, err
-		}
+		logutil.LogDebug("Enviroment is Linux")
+		return checkLinuxTools()
 	default:
 		return false, fmt.Errorf("unsupported opeaating system %s", runtime.GOOS)
 	}
 }
 
-// 获取
-func getExeDir(systemArch string) (bool, error) {
-	if systemArch == "windows" {
-		// 编译生成的可执行文件的路径 go build cmd/main.go 后生成exe的路径
-		exe, err := os.Executable()
-		if err != nil {
-			panic(err)
-		}
-		// 获取项目所在路径， go run cmd/main.go 下的路径
-		dir := filepath.Dir(exe)
-		//fmt.Println("Executable directory: ", dir)
-		pwd, err := os.Getwd()
-		if err != nil {
-			fmt.Println("Error getting working directory:", err)
-		}
-		//fmt.Println("Current working directory:", pwd)
-		directories := []string{
-			filepath.Join(dir, "tools", "OpenHardwareMonitor", "OpenHardwareMonitor.exe"),
-			filepath.Join(pwd, "tools", "OpenHardwareMonitor", "OpenHardwareMonitor.exe"),
-		}
-		// 遍历这些路径查看是否有
-		for _, filePath := range directories {
-			if _, err := os.Stat(filePath); err == nil {
-				fmt.Printf("Found OpenHardwareMonitor.exe at %s\n", filePath)
-				return true, nil
-			}
-		}
-		return false, errors.New("获取OpenHardwareMonitor可执行文件失败")
+// 检查Windows系统所需工具
+func checkWindowsTools() (bool, error) {
+	exe, err := os.Executable()
+	if err != nil {
+		return false, fmt.Errorf("error getting executable path: %w", err)
 	}
-	if systemArch == "linux" {
-		if info, err := os.Lstat("/usr/bin/sensors"); err == nil && !info.IsDir() {
+	dir := filepath.Dir(exe)
+	pwd, err := os.Getwd()
+	if err != nil {
+		return false, fmt.Errorf("error getting working directory: %w", err)
+	}
+
+	directories := []string{
+		filepath.Join(dir, "tools", "OpenHardwareMonitor", "OpenHardwareMonitor.exe"),
+		filepath.Join(pwd, "tools", "OpenHardwareMonitor", "OpenHardwareMonitor.exe"),
+	}
+
+	for _, filePath := range directories {
+		if _, err := os.Stat(filePath); err == nil {
+			logutil.LogDebug("Found OpenHardwareMonitor.exe at %s", filePath)
 			return true, nil
 		}
 	}
-
-	return false, errors.New("没有找到OpenHardwareMonitor.exe程序")
+	return false, errors.New("failed to find OpenHardwareMonitor.exe")
 }
+
+// 检查Linux系统所需工具
+func checkLinuxTools() (bool, error) {
+	if info, err := os.Lstat("/usr/bin/sensors"); err == nil && !info.IsDir() {
+		return true, nil
+	}
+	return false, errors.New("sensors tool not found")
+}
+
+// 获取 windows 和 linux 可执行工具函数
+// func getExeDir(systemArch string) (bool, error) {
+// 	if systemArch == "windows" {
+// 		// 编译生成的可执行文件的路径 go build cmd/main.go 后生成exe的路径
+// 		exe, err := os.Executable()
+// 		if err != nil {
+// 			panic(err)
+// 		}
+// 		// 获取项目所在路径， go run cmd/main.go 下的路径
+// 		dir := filepath.Dir(exe)
+// 		//fmt.Println("Executable directory: ", dir)
+// 		pwd, err := os.Getwd()
+// 		if err != nil {
+// 			fmt.Println("Error getting working directory:", err)
+// 		}
+// 		//fmt.Println("Current working directory:", pwd)
+// 		directories := []string{
+// 			filepath.Join(dir, "tools", "OpenHardwareMonitor", "OpenHardwareMonitor.exe"),
+// 			filepath.Join(pwd, "tools", "OpenHardwareMonitor", "OpenHardwareMonitor.exe"),
+// 		}
+// 		// 遍历这些路径查看是否有
+// 		for _, filePath := range directories {
+// 			if _, err := os.Stat(filePath); err == nil {
+// 				fmt.Printf("Found OpenHardwareMonitor.exe at %s\n", filePath)
+// 				return true, nil
+// 			}
+// 		}
+// 		return false, errors.New("获取OpenHardwareMonitor可执行文件失败")
+// 	}
+// 	if systemArch == "linux" {
+// 		if info, err := os.Lstat("/usr/bin/sensors"); err == nil && !info.IsDir() {
+// 			return true, nil
+// 		}
+// 	}
+
+// 	return false, errors.New("没有找到OpenHardwareMonitor.exe程序")
+// }
