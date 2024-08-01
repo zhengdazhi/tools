@@ -1,0 +1,44 @@
+测试prometheus alertmanager 发送数据
+curl -X POST http://localhost:8080/ -H "Content-Type: application/json" -d '
+{
+    "receiver": "sos_alert",
+    "status": "resolved",
+    "alerts": [
+        {
+            "status": "resolved",
+            "labels": {
+                "alertname": "cpu_temperature_max",
+                "alias": "temperature",
+                "instance": "10.10.1.21:8000",
+                "job": "cpu temperature",
+                "severity": "critical"
+            },
+            "annotations": {
+                "description": "测试环境 10.10.1.21:8000 of job cpu temperaturecpu核心最高温度[51].",
+                "summary": "Instance 10.10.1.21:8000 cpu核心最高温度[51]."
+            },
+            "startsAt": "2023-02-17T01:51:02.565Z",
+            "endsAt": "2023-02-17T01:51:32.565Z",
+            "generatorURL": "http://localhost.localdomain:9090/graph?g0.expr=cpu_core_temperature_max+%3E+50&g0.tab=1",
+            "fingerprint": "df65a5a1f3b2fea6"
+        }
+    ],
+    "groupLabels": {
+        "alertname": "cpu_temperature_max"
+    },
+    "commonLabels": {
+        "alertname": "cpu_temperature_max",
+        "alias": "temperature",
+        "instance": "10.10.1.21:8000",
+        "job": "cpu temperature",
+        "severity": "critical"
+    },
+    "commonAnnotations": {
+        "description": "测试环境 10.10.1.21:8000 of job cpu temperaturecpu核心最高温度[51].",
+        "summary": "Instance 10.10.1.21:8000 cpu核心最高温度[51]."
+    },
+    "externalURL": "http://localhost.localdomain:9093",
+    "version": "4",
+    "groupKey": "{}/{alertname=~'cpu_temperature_avg|cpu_temperature_max'}:{alertname='cpu_temperature_max'}",
+    "truncatedAlerts": 0
+}'

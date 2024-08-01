@@ -2,10 +2,10 @@ package temperature
 
 import (
 	"errors"
-	"fmt"
 	"io"
 	"log"
 	"os/exec"
+	"prome_cpu_temperature/logutil"
 	"regexp"
 	"strconv"
 	"strings"
@@ -17,7 +17,7 @@ type LinuxTemperatureGetter struct {
 
 // 实现temperature中的接口
 func (l LinuxTemperatureGetter) FetchCPUTemperature() (*CPUData, error) {
-	fmt.Println("linux cpu temperature")
+	logutil.LogDebug("linux cpu temperature")
 	// 采集原始数据
 	cpu_tem, err := getCpuTem()
 	// for _, line := range cpu_tem {
@@ -44,6 +44,7 @@ func (l LinuxTemperatureGetter) FetchCPUTemperature() (*CPUData, error) {
 
 // 通过sensors命令获取cpu温度信息
 func getCpuTem() ([]string, error) {
+	logutil.LogDebug("使用sensors收集cpu温度数据")
 	cmd := exec.Command("sensors")
 
 	out, err := cmd.StdoutPipe()
