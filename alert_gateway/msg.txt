@@ -1,4 +1,4 @@
-测试prometheus alertmanager 发送数据
+测试 prometheus alertmanager 发送数据
 curl -X POST http://localhost:8080/ -H "Content-Type: application/json" -d '
 {
     "receiver": "sos_alert",
