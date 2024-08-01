@@ -1,2 +1,3 @@
 *.log
 *.toml
+*sftp_config.json
