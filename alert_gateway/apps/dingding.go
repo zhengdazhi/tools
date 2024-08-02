@@ -3,7 +3,7 @@ package apps
 import (
 	"alert_gateway/config"
 	"alert_gateway/logger"
-
+	"errors"
 	"bytes"
 	"crypto/hmac"
 	"crypto/sha256"
@@ -19,23 +19,16 @@ import (
 )
 
 func sendMsg(message, messageType string, cfg config.Config) (string, error) {
-	baseURL := cfg.App["webhook_url"].(string)
-	token := cfg.App["token"].(string)
-	timestamp := getTimestamp()
-	var dingdingUrl string
-	if secret, ok := cfg.App["secret"].(string); ok {
-		// sign := makeSign(string(timestamp), secret)
-		sign := makeSign(fmt.Sprintf("%d", timestamp), secret)
-		// url = url + "access_token=" + token + "&timestamp=" + string(timestamp) + "&sign=" + sign
-		dingdingUrl = baseURL + "access_token=" + token + "&timestamp=" + fmt.Sprintf("%d", timestamp) + "&sign=" + sign
-	} else {
-		dingdingUrl = baseURL + "access_token=" + token
+	dingdingUrl, err := checkConfig(cfg)
+	if err != nil {
+		logger.Errorf("get dingding webhook fail: %s", dingdingUrl)
+		return "", err
 	}
 
 	logger.Debugf("ding ding webhook url: %s", dingdingUrl)
 
 	var sendDataBytes []byte
-	var err error
+	//var err error
 	// 判断是文本消息还是markdown消息
 	if messageType == "text" {
 		sendData := TextMessage{
@@ -101,6 +94,34 @@ func sendMsg(message, messageType string, cfg config.Config) (string, error) {
 		logger.Debugf("发送钉钉相应 %s", string(respBody))
 		return string(respBody), nil
 	}
+}
+
+// 检查配置文件
+func checkConfig(cfg config.Config) (string, error) {
+	var dingdingUrl string
+	timestamp := getTimestamp()
+	
+	baseURL, ok := cfg.App["webhook_url"].(string)
+	if !ok {
+		logger.Error("get webhook_url fail")
+		return "", errors.New("webhook_url must be provided")
+	}
+	
+	token, ok := cfg.App["token"].(string)
+	if !ok {
+		logger.Error("get token fail")
+		return "", errors.New("token must be provided")
+	}
+	
+	secret, ok := cfg.App["secret"].(string)
+	if ok {
+		sign := makeSign(fmt.Sprintf("%d", timestamp), secret)
+		dingdingUrl = baseURL + "access_token=" + token + "&timestamp=" + fmt.Sprintf("%d", timestamp) + "&sign=" + sign
+	} else {
+		dingdingUrl = baseURL + "access_token=" + token
+	}
+	
+	return dingdingUrl, nil
 }
 
 // 使用secret对钉钉消息进行签名，返回一个签名后的字符串
